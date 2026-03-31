@@ -140,7 +140,7 @@ function checkStart(){
   if(loaded>=total && !gameStarted){ gameStarted=true; startGame(); }
 }
 // Safety timeout
-setTimeout(()=>{ if(!gameStarted){gameStarted=true;startGame();} }, 6000);
+setTimeout(()=>{ if(!gameStarted){gameStarted=true;startGame();} }, 2000);
 
 // ── GEOMETRY HELPERS ──────────────────────────────────────────────────────────
 function clone(name){
@@ -462,6 +462,9 @@ function startGame(){
   setTimeout(()=>notify('⛽ Modré DEPO uprostřed = doplnit',''),4500);
 }
 
+// Start immediately, load models in background
+startGame();
+gameStarted=true;
 // Load all models from ROOT (no assets/ subfolder)
 ['truck','garbage-truck','firetruck','van','delivery',
  'sedan','taxi','police','suv','hatchback-sports',
