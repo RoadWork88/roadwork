@@ -1,225 +1,476 @@
 <!DOCTYPE html>
-<html>
+<html lang="cs">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Road Work</title>
 <style>
-*{margin:0;padding:0;}
-body{background:#000;overflow:hidden;}
-canvas{display:block;}
-#info{position:absolute;top:10px;left:10px;color:#fff;font-family:monospace;font-size:12px;background:rgba(0,0,0,.7);padding:8px;border-radius:4px;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:#1a1a2e;overflow:hidden;font-family:'Segoe UI',sans-serif;touch-action:none;}
+#hud{position:absolute;top:0;left:0;right:0;z-index:10;pointer-events:none;}
+#hudbar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(0,0,0,0.72);}
+#hudmission{flex:1;}
+#hudname{font-size:12px;font-weight:700;color:#FFD700;}
+#hudprogwrap{height:5px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:3px;overflow:hidden;}
+#hudprog{height:100%;width:0%;background:linear-gradient(90deg,#00D4AA,#FFD700);border-radius:3px;transition:width .4s;}
+.hstat{display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,0.4);border-radius:7px;padding:3px 8px;}
+.hv{font-size:13px;font-weight:800;color:#fff;}
+.hv.g{color:#FFD700;}.hv.t{color:#00D4AA;}
+.hl{font-size:7px;color:rgba(255,255,255,0.4);text-transform:uppercase;}
+#vhud{position:absolute;z-index:15;pointer-events:none;}
+.vb{width:54px;height:5px;background:rgba(0,0,0,0.5);border-radius:3px;margin-bottom:2px;overflow:hidden;}
+.vbf{height:100%;border-radius:3px;transition:width .3s;}
+#notifs{position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;width:90%;max-width:320px;}
+.notif{background:rgba(0,0,0,0.9);border-radius:16px;padding:6px 16px;font-size:11px;font-weight:700;color:#fff;border:1.5px solid rgba(255,255,255,0.1);animation:nf 3s forwards;text-align:center;}
+.notif.g{border-color:#4CAF50;color:#81C784;}
+.notif.y{border-color:#FFD700;color:#FFD700;}
+.notif.r{border-color:#F44336;color:#EF9A9A;}
+@keyframes nf{0%{opacity:0;transform:translateY(-6px)}12%{opacity:1;transform:translateY(0)}75%{opacity:1}100%{opacity:0}}
+#controls{position:absolute;bottom:0;left:0;right:0;z-index:10;display:flex;align-items:flex-end;justify-content:space-between;padding:12px 16px 20px;}
+#joystick{width:100px;height:100px;position:relative;pointer-events:all;touch-action:none;}
+#jbase{width:100%;height:100%;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.18);}
+#jthumb{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.28);border:2px solid rgba(255,255,255,0.5);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+#jthumb.on{background:rgba(255,215,0,0.5);border-color:#FFD700;}
+#abtns{display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:all;}
+.abtn{width:62px;height:62px;border-radius:50%;border:2.5px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.6);color:#fff;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;user-select:none;}
+#bc{border-color:#FFD700;background:rgba(255,215,0,0.1);}
+#bc.on{background:rgba(255,215,0,0.45);box-shadow:0 0 18px rgba(255,215,0,0.5);}
+#br{border-color:#2196F3;background:rgba(33,150,243,0.1);}
+#be{border-color:#4CAF50;background:rgba(76,175,80,0.1);}
+#vsel{position:absolute;bottom:125px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:10;pointer-events:all;}
+.vbtn{padding:5px 11px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.6);color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;cursor:pointer;touch-action:manipulation;white-space:nowrap;}
+.vbtn.on{border-color:#FFD700;color:#FFD700;background:rgba(255,215,0,0.12);}
+#loadinfo{position:absolute;bottom:50%;left:50%;transform:translate(-50%,50%);color:#aaa;font-size:11px;z-index:5;text-align:center;}
 </style>
 </head>
 <body>
-<div id="info">Načítám Three.js...</div>
+<div id="hud">
+  <div id="hudbar">
+    <div id="hudmission">
+      <div id="hudname">🧹 Vyčisti ulice — Centrum</div>
+      <div id="hudprogwrap"><div id="hudprog"></div></div>
+    </div>
+    <div style="display:flex;gap:5px;">
+      <div class="hstat"><span class="hv g" id="hm">500</span><span class="hl">Kč</span></div>
+      <div class="hstat"><span class="hv t" id="hc">0%</span><span class="hl">čisto</span></div>
+    </div>
+  </div>
+</div>
+<div id="vhud">
+  <div class="vb"><div class="vbf" id="vbf" style="width:100%;background:#FF9800;"></div></div>
+  <div class="vb"><div class="vbf" id="vtf" style="width:0%;background:#795548;"></div></div>
+</div>
+<div id="notifs"></div>
+<div id="loadinfo">Načítám 3D modely...</div>
+<div id="vsel">
+  <button class="vbtn on" onclick="selV('truck',this)">🚛 Zametač</button>
+  <button class="vbtn" onclick="selV('garbage-truck',this)">🗑 Popelář</button>
+  <button class="vbtn" onclick="selV('firetruck',this)">🚒 Kropič</button>
+  <button class="vbtn" onclick="selV('van',this)">🚐 Dodávka</button>
+</div>
+<div id="controls">
+  <div id="joystick"><div id="jbase"><div id="jthumb"></div></div></div>
+  <div id="abtns">
+    <div class="abtn" id="bc">🧹</div>
+    <div class="abtn" id="br">⛽</div>
+    <div class="abtn" id="be">🗑</div>
+  </div>
+</div>
+
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
-document.getElementById('info').textContent = 'Three.js OK, stavím scénu...';
-
-const W = window.innerWidth, H = window.innerHeight;
+// ── RENDERER ──────────────────────────────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(W, H);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.insertBefore(renderer.domElement, document.body.firstChild);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
+scene.background = new THREE.Color(0x7EC8E3);
+scene.fog = new THREE.Fog(0x7EC8E3, 40, 80);
 
-// ISO camera
-const F = 10, A = W/H;
-const cam = new THREE.OrthographicCamera(-F*A, F*A, F, -F, 0.1, 200);
-cam.position.set(15, 15, 15);
-cam.lookAt(0, 0, 0);
+const F=10;
+function asp(){return innerWidth/innerHeight;}
+const cam = new THREE.OrthographicCamera(-F*asp(),F*asp(),F,-F,0.1,200);
+cam.position.set(18,18,18); cam.lookAt(0,0,0);
+window.addEventListener('resize',()=>{
+  const a=asp(); cam.left=-F*a; cam.right=F*a; cam.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
 
-// Lights
-scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-const sun = new THREE.DirectionalLight(0xffffff, 2);
-sun.position.set(10, 20, 10);
-sun.castShadow = true;
-scene.add(sun);
+// ── LIGHTS ────────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0xffffff,1.4));
+const sun=new THREE.DirectionalLight(0xfff5e0,2.2);
+sun.position.set(12,20,8); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,near:.5,far:100});
+sun.shadow.bias=-0.001; scene.add(sun);
+scene.add(Object.assign(new THREE.DirectionalLight(0xd0e8ff,.6),{position:new THREE.Vector3(-6,8,-6)}));
 
-// Ground
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 40),
-  new THREE.MeshStandardMaterial({color: 0x4CAF50})
-);
-ground.rotation.x = -Math.PI/2;
-ground.receiveShadow = true;
-scene.add(ground);
+// ── LOADER — files in ROOT (no assets/ prefix) ────────────────────────────────
+const gltfLoader = new GLTFLoader();
+const models = {};
+let loaded=0, total=0, gameStarted=false;
 
-// Roads
-const roadMat = new THREE.MeshStandardMaterial({color: 0x424242});
-for(let x=-6; x<=6; x+=2){
-  const r = new THREE.Mesh(new THREE.BoxGeometry(2, 0.05, 14), roadMat);
-  if(x===-6||x===0||x===6){ r.position.set(x, 0, 0); r.receiveShadow=true; scene.add(r); }
-}
-for(let z=-6; z<=6; z+=2){
-  const r = new THREE.Mesh(new THREE.BoxGeometry(14, 0.05, 2), roadMat);
-  if(z===-6||z===0||z===6){ r.position.set(0, 0, z); r.receiveShadow=true; scene.add(r); }
-}
-
-// Buildings
-const bCols = [0xE53935,0x1E88E5,0x43A047,0xFB8C00,0x8E24AA,0x00ACC1,0xF4511E,0x3949AB];
-[[-3,-3],[-3,3],[3,-3],[3,3],[-1,-3],[1,-3],[-1,3],[1,3]].forEach(([x,z],i)=>{
-  const h = 1.5+Math.random()*2;
-  const b = new THREE.Mesh(
-    new THREE.BoxGeometry(1.5, h, 1.5),
-    new THREE.MeshStandardMaterial({color:bCols[i%bCols.length]})
+function loadModel(name){
+  total++;
+  // Try root path first (files uploaded directly to GitHub root)
+  gltfLoader.load(`${name}.glb`,
+    gltf=>{
+      gltf.scene.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;}});
+      models[name]=gltf.scene;
+      loaded++; checkStart();
+    },
+    undefined,
+    ()=>{ loaded++; checkStart(); } // fallback: use box geometry
   );
-  b.position.set(x, h/2, z);
-  b.castShadow = true;
-  scene.add(b);
-});
-
-// Player truck
-const truckGroup = new THREE.Group();
-const bodyMat = new THREE.MeshStandardMaterial({color: 0xFF6B35});
-const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 1.7), bodyMat);
-body.position.y = 0.35; body.castShadow = true; truckGroup.add(body);
-const cab = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.4, 0.7), bodyMat);
-cab.position.set(0, 0.65, 0.5); truckGroup.add(cab);
-const ws = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.3, 0.05),
-  new THREE.MeshStandardMaterial({color:0xB3E5FC, transparent:true, opacity:0.8}));
-ws.position.set(0, 0.65, 0.85); truckGroup.add(ws);
-// Wheels
-[[-.48,.12,.58],[.48,.12,.58],[-.48,.12,-.58],[.48,.12,-.58]].forEach(([wx,wy,wz])=>{
-  const w = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.16,10),
-    new THREE.MeshStandardMaterial({color:0x111}));
-  w.rotation.z = Math.PI/2; w.position.set(wx,wy,wz); truckGroup.add(w);
-});
-scene.add(truckGroup);
-
-// Dirt patches
-const dirts = [];
-[[-1,-1],[1,-1],[1,1],[-1,1],[-2,0],[2,0],[0,-2],[0,2],[-3,-1],[3,1],[-1,3],[1,-3]].forEach(([x,z])=>{
-  const d = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.8+Math.random()*0.6, 0.6+Math.random()*0.5),
-    new THREE.MeshStandardMaterial({color:0x5D4037})
-  );
-  d.rotation.x = -Math.PI/2;
-  d.rotation.z = Math.random()*Math.PI;
-  d.position.set(x+(Math.random()-.5)*.3, 0.025, z+(Math.random()-.5)*.3);
-  d.userData.cleaned = false;
-  scene.add(d); dirts.push(d);
-});
-
-// Depo marker
-const depot = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.06,1.8),
-  new THREE.MeshStandardMaterial({color:0x1565C0}));
-depot.position.set(0, 0.03, 0);
-scene.add(depot);
-
-document.getElementById('info').textContent = 'Scéna OK! Ovládání: WASD / joystick';
-setTimeout(()=>{ document.getElementById('info').style.display='none'; }, 3000);
-
-// Game state
-const G = {fuel:100,tank:0,cleaning:false,money:500,cleanedDirt:0,totalDirt:dirts.length};
-const pos = new THREE.Vector3();
-let pAngle=0, tAngle=0;
-
-// Joystick
-let jx=0, jz=0;
-const joystickDiv = document.createElement('div');
-joystickDiv.style.cssText='position:absolute;bottom:20px;left:20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);touch-action:none;';
-const thumb = document.createElement('div');
-thumb.style.cssText='width:40px;height:40px;border-radius:50%;background:rgba(255,215,0,0.4);border:2px solid #FFD700;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);';
-joystickDiv.appendChild(thumb); document.body.appendChild(joystickDiv);
-
-let jid=null, jcx=0, jcy=0, jR=30;
-joystickDiv.addEventListener('touchstart',e=>{
-  e.preventDefault(); const t=e.touches[0]; jid=t.identifier;
-  const r=joystickDiv.getBoundingClientRect(); jcx=r.left+r.width/2; jcy=r.top+r.height/2;
-  movJ(e);
-},{passive:false});
-joystickDiv.addEventListener('touchmove',e=>{ e.preventDefault(); movJ(e); },{passive:false});
-joystickDiv.addEventListener('touchend',()=>{ jid=null;jx=0;jz=0;thumb.style.transform='translate(-50%,-50%)'; });
-function movJ(e){
-  const t=Array.from(e.touches).find(tt=>tt.identifier===jid); if(!t)return;
-  let dx=t.clientX-jcx, dz=t.clientY-jcy;
-  const d=Math.hypot(dx,dz); if(d>jR){dx=dx/d*jR;dz=dz/d*jR;}
-  thumb.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dz}px))`;
-  jx=dx/jR; jz=dz/jR;
 }
 
-// Clean button
-const cleanBtn = document.createElement('div');
-cleanBtn.style.cssText='position:absolute;bottom:20px;right:20px;width:64px;height:64px;border-radius:50%;background:rgba(255,215,0,0.15);border:2.5px solid #FFD700;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;touch-action:manipulation;user-select:none;';
-cleanBtn.textContent='🧹';
-document.body.appendChild(cleanBtn);
-cleanBtn.addEventListener('click',()=>toggleClean());
-cleanBtn.addEventListener('touchstart',e=>{e.preventDefault();toggleClean();},{passive:false});
-function toggleClean(){
-  G.cleaning=!G.cleaning;
-  cleanBtn.style.background=G.cleaning?'rgba(255,215,0,0.45)':'rgba(255,215,0,0.15)';
-  cleanBtn.style.boxShadow=G.cleaning?'0 0 18px rgba(255,215,0,0.6)':'none';
+function checkStart(){
+  const pct=Math.round(loaded/total*100);
+  document.getElementById('loadinfo').textContent=`Načítám modely... ${loaded}/${total}`;
+  if(loaded>=total && !gameStarted){ gameStarted=true; startGame(); }
+}
+// Safety timeout
+setTimeout(()=>{ if(!gameStarted){gameStarted=true;startGame();} }, 6000);
+
+// ── GEOMETRY HELPERS ──────────────────────────────────────────────────────────
+function clone(name){
+  if(models[name]) return models[name].clone();
+  // Fallback box
+  const colors={truck:0xFF6B35,'garbage-truck':0x558B2F,firetruck:0xC62828,van:0x6A1B9A,
+    delivery:0xFF8F00,sedan:0x1565C0,taxi:0xF9A825,police:0x1a1a8a,suv:0x2E7D32,
+    'hatchback-sports':0xC62828,'road-straight':0x424242,'road-crossroad':0x3a3a3a,
+    'building-a':0xE53935,'building-b':0x1E88E5,'building-c':0x43A047,'building-d':0xFB8C00,
+    'building-e':0x8E24AA,'building-f':0x00ACC1,
+    'building-type-a':0xF4511E,'building-type-b':0x3949AB,'building-type-c':0x00897B,'building-type-d':0xC0CA33};
+  const col=colors[name]||0x888888;
+  const isRoad=name.includes('road');
+  const isBuilding=name.includes('building');
+  const g=isRoad?new THREE.BoxGeometry(2,.05,2):
+           isBuilding?new THREE.BoxGeometry(1.4,1.5+Math.random()*2,1.4):
+           new THREE.BoxGeometry(.9,.5,1.6);
+  const m=new THREE.MeshStandardMaterial({color:col,roughness:.7});
+  const mesh=new THREE.Mesh(g,m);
+  mesh.castShadow=true; mesh.receiveShadow=true;
+  return mesh;
 }
 
-// HUD
-const hudDiv = document.createElement('div');
-hudDiv.style.cssText='position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);border-radius:10px;padding:8px 12px;color:#fff;font-family:monospace;font-size:12px;text-align:right;';
-document.body.appendChild(hudDiv);
+// ── MAP ───────────────────────────────────────────────────────────────────────
+function buildMap(){
+  // Ground
+  const gr=new THREE.Mesh(new THREE.PlaneGeometry(60,60),
+    new THREE.MeshStandardMaterial({color:0x558B2F,roughness:.95}));
+  gr.rotation.x=-Math.PI/2; gr.position.y=-0.02; gr.receiveShadow=true; scene.add(gr);
+
+  // Roads horizontal
+  [-6,0,6].forEach(z=>{
+    for(let x=-8;x<=8;x+=2){
+      const m=clone('road-straight'); m.position.set(x,0,z); scene.add(m);
+    }
+  });
+  // Roads vertical
+  [-6,0,6].forEach(x=>{
+    for(let z=-8;z<=8;z+=2){
+      const m=clone('road-straight'); m.position.set(x,0,z); scene.add(m);
+    }
+  });
+  // Crossroads
+  [[-6,-6],[0,-6],[6,-6],[-6,0],[0,0],[6,0],[-6,6],[0,6],[6,6]].forEach(([x,z])=>{
+    const m=clone('road-crossroad'); m.position.set(x,0,z); scene.add(m);
+  });
+
+  // Road markings
+  const lineMat=new THREE.MeshStandardMaterial({color:0xFFFFFF,roughness:.8});
+  for(let x=-7;x<=7;x+=2.5){
+    [-6,0,6].forEach(z=>{
+      const l=new THREE.Mesh(new THREE.BoxGeometry(.7,.06,.16),lineMat);
+      l.position.set(x,.03,z); scene.add(l);
+    });
+  }
+  for(let z=-7;z<=7;z+=2.5){
+    [-6,0,6].forEach(x=>{
+      const l=new THREE.Mesh(new THREE.BoxGeometry(.16,.06,.7),lineMat);
+      l.position.set(x,.03,z); scene.add(l);
+    });
+  }
+
+  // Buildings in 4 blocks
+  const bNames=['building-a','building-b','building-c','building-d','building-e','building-f',
+                 'building-type-a','building-type-b','building-type-c','building-type-d'];
+  const slots=[
+    [-3,-3],[-1,-3],[1,-3],[3,-3],
+    [-3,-1],[3,-1],[-3,1],[3,1],
+    [-3,3],[-1,3],[1,3],[3,3],
+  ];
+  slots.forEach(([bx,bz],i)=>{
+    const m=clone(bNames[i%bNames.length]);
+    m.scale.setScalar(.9+Math.random()*.2);
+    m.position.set(bx,0,bz);
+    m.rotation.y=[0,Math.PI/2,Math.PI,-Math.PI/2][i%4];
+    scene.add(m);
+  });
+
+  // Sidewalks
+  const swMat=new THREE.MeshStandardMaterial({color:0xBDBDBD,roughness:.95});
+  [-6,0,6].forEach(z=>{
+    [-1,1].forEach(off=>{
+      const sw=new THREE.Mesh(new THREE.BoxGeometry(14,.04,.55),swMat);
+      sw.position.set(0,.01,z+off*1.3); sw.receiveShadow=true; scene.add(sw);
+    });
+  });
+  [-6,0,6].forEach(x=>{
+    [-1,1].forEach(off=>{
+      const sw=new THREE.Mesh(new THREE.BoxGeometry(.55,.04,14),swMat);
+      sw.position.set(x+off*1.3,.01,0); sw.receiveShadow=true; scene.add(sw);
+    });
+  });
+
+  // Trees
+  const tMat1=new THREE.MeshStandardMaterial({color:0x2E7D32});
+  const tMat2=new THREE.MeshStandardMaterial({color:0x388E3C});
+  const trMat=new THREE.MeshStandardMaterial({color:0x5D4037});
+  [[-4.5,-4.5],[4.5,-4.5],[-4.5,4.5],[4.5,4.5],
+   [-2,-7.5],[2,-7.5],[-2,7.5],[2,7.5],
+   [-7.5,-2],[-7.5,2],[7.5,-2],[7.5,2]].forEach(([tx,tz])=>{
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,.7,7),trMat);
+    trunk.position.set(tx,.35,tz); trunk.castShadow=true; scene.add(trunk);
+    const l1=new THREE.Mesh(new THREE.SphereGeometry(.48,8,6),tMat1);
+    l1.position.set(tx,1.05,tz); l1.castShadow=true; scene.add(l1);
+    const l2=new THREE.Mesh(new THREE.SphereGeometry(.32,7,5),tMat2);
+    l2.position.set(tx-.18,1.42,tz+.18); scene.add(l2);
+  });
+
+  // DEPO (center — blue platform)
+  const depotMat=new THREE.MeshStandardMaterial({color:0x1565C0,roughness:.5});
+  const depot=new THREE.Mesh(new THREE.BoxGeometry(2.2,.1,2.2),depotMat);
+  depot.position.set(0,.05,0); scene.add(depot);
+  // Depo sign
+  const signMat=new THREE.MeshStandardMaterial({color:0xFFD700});
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(.9,.45,.06),signMat);
+  sign.position.set(0,.55,.4); scene.add(sign);
+
+  // Gas station
+  const gasMat=new THREE.MeshStandardMaterial({color:0xFFF9C4,roughness:.8});
+  const gasFloor=new THREE.Mesh(new THREE.BoxGeometry(2,.06,2),gasMat);
+  gasFloor.position.set(4.5,.03,4.5); scene.add(gasFloor);
+  const gasPump=new THREE.Mesh(new THREE.BoxGeometry(.5,.9,.5),
+    new THREE.MeshStandardMaterial({color:0xFF6F00}));
+  gasPump.position.set(4.5,.45,5.2); gasPump.castShadow=true; scene.add(gasPump);
+  const gasRoof=new THREE.Mesh(new THREE.BoxGeometry(2.2,.08,2.2),
+    new THREE.MeshStandardMaterial({color:0xE0E0E0}));
+  gasRoof.position.set(4.5,1.2,4.5); scene.add(gasRoof);
+}
+
+// ── DIRT ─────────────────────────────────────────────────────────────────────
+const dirts=[];
+function spawnDirt(){
+  const spots=[
+    {x:-2,z:-2},{x:0,z:-4},{x:2,z:-2},{x:3,z:0},{x:2,z:2},{x:0,z:4},
+    {x:-2,z:2},{x:-3,z:0},{x:-1,z:-1},{x:1,z:-1},{x:1,z:1},{x:-1,z:1},
+    {x:-4,z:-2},{x:4,z:-2},{x:-4,z:2},{x:4,z:2},
+    {x:-3,z:-5},{x:3,z:-5},{x:-2,z:5},{x:3,z:4},
+    {x:-5,z:-1},{x:5,z:1},{x:2,z:-5},{x:-3,z:4},
+  ];
+  const dCols=[0x5D4037,0x6D4C41,0x4E342E,0x795548,0x3E2723];
+  spots.forEach((s,i)=>{
+    const geo=new THREE.PlaneGeometry(.7+Math.random()*.8,.5+Math.random()*.6);
+    const mat=new THREE.MeshStandardMaterial({color:dCols[i%5],roughness:1});
+    const m=new THREE.Mesh(geo,mat);
+    m.rotation.x=-Math.PI/2; m.rotation.z=Math.random()*Math.PI;
+    m.position.set(s.x+(Math.random()-.5)*.4,.025,s.z+(Math.random()-.5)*.4);
+    m.userData.cleaned=false; m.receiveShadow=true;
+    scene.add(m); dirts.push(m);
+  });
+  G.totalDirt=dirts.length;
+}
+
+// ── NPC CARS ─────────────────────────────────────────────────────────────────
+const npcs=[];
+const NPC_ROUTES=[
+  {model:'sedan',    path:[{x:-8,z:-6},{x:8,z:-6}], spd:.018},
+  {model:'taxi',     path:[{x:8,z:0},{x:-8,z:0}],   spd:.022},
+  {model:'police',   path:[{x:0,z:-8},{x:0,z:8}],   spd:.016},
+  {model:'suv',      path:[{x:-6,z:-8},{x:-6,z:8}], spd:.014},
+  {model:'hatchback-sports', path:[{x:8,z:6},{x:-8,z:6}], spd:.025},
+  {model:'delivery', path:[{x:6,z:8},{x:6,z:-8}],   spd:.013},
+];
+function spawnNPCs(){
+  NPC_ROUTES.forEach(r=>{
+    const m=clone(r.model);
+    m.scale.setScalar(.48);
+    m.position.set(r.path[0].x,0,r.path[0].z);
+    scene.add(m);
+    npcs.push({mesh:m,path:r.path,t:Math.random(),spd:r.spd,idx:0});
+  });
+}
+
+// ── PLAYER ────────────────────────────────────────────────────────────────────
+let player=null;
+const pPos=new THREE.Vector3();
+let pAngle=0,tAngle=0;
+
+function spawnPlayer(name){
+  if(player) scene.remove(player);
+  player=clone(name);
+  player.scale.setScalar(.5);
+  player.position.copy(pPos);
+  player.castShadow=true;
+  scene.add(player);
+}
+
+// ── GAME STATE ────────────────────────────────────────────────────────────────
+const G={money:500,fuel:100,fuelMax:100,tank:0,tankMax:80,cleaning:false,totalDirt:0,cleanedDirt:0,selV:'truck'};
+
 function updateHUD(){
-  const pct=Math.round(G.cleanedDirt/G.totalDirt*100);
-  hudDiv.innerHTML=`<span style="color:#FFD700">💰 ${G.money} Kč</span><br><span style="color:#00D4AA">🧹 ${pct}%</span><br><span style="color:#FF9800">⛽ ${Math.round(G.fuel)}%</span>`;
+  document.getElementById('hm').textContent=G.money.toLocaleString('cs-CZ');
+  const pct=G.totalDirt>0?Math.round(G.cleanedDirt/G.totalDirt*100):0;
+  document.getElementById('hc').textContent=pct+'%';
+  document.getElementById('hudprog').style.width=pct+'%';
+  document.getElementById('vbf').style.width=(G.fuel/G.fuelMax*100)+'%';
+  document.getElementById('vtf').style.width=(G.tank/G.tankMax*100)+'%';
 }
-updateHUD();
+function updateVehHUD(){
+  if(!player)return;
+  const p=player.position.clone().add(new THREE.Vector3(0,2.5,0));
+  p.project(cam);
+  const vh=document.getElementById('vhud');
+  vh.style.left=(p.x*.5+.5)*innerWidth-27+'px';
+  vh.style.top=(-.5*p.y+.5)*innerHeight-18+'px';
+}
+function notify(msg,cls=''){
+  const el=document.createElement('div');
+  el.className='notif '+cls; el.textContent=msg;
+  document.getElementById('notifs').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
 
-// Keyboard
+// ── JOYSTICK ──────────────────────────────────────────────────────────────────
+const jb=document.getElementById('jbase'),jthumb=document.getElementById('jthumb');
+let jid=null,jcx=0,jcy=0,jR=30,jx=0,jz=0;
+function jS(e){e.preventDefault();const t=e.touches[0];jid=t.identifier;const r=jb.getBoundingClientRect();jcx=r.left+r.width/2;jcy=r.top+r.height/2;jthumb.classList.add('on');jM(e);}
+function jM(e){if(jid===null)return;e.preventDefault();const t=Array.from(e.touches).find(tt=>tt.identifier===jid);if(!t)return;let dx=t.clientX-jcx,dz=t.clientY-jcy;const d=Math.hypot(dx,dz);if(d>jR){dx=dx/d*jR;dz=dz/d*jR;}jthumb.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dz}px))`;jx=dx/jR;jz=dz/jR;}
+function jE(){jid=null;jx=0;jz=0;jthumb.style.transform='translate(-50%,-50%)';jthumb.classList.remove('on');}
+document.getElementById('joystick').addEventListener('touchstart',jS,{passive:false});
+document.getElementById('joystick').addEventListener('touchmove',jM,{passive:false});
+document.getElementById('joystick').addEventListener('touchend',jE);
+document.getElementById('joystick').addEventListener('touchcancel',jE);
 const keys={};
 document.addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
 document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 
-// Loop
-let lt=0;
+// ── BUTTONS ───────────────────────────────────────────────────────────────────
+const bc=document.getElementById('bc');
+function toggleClean(e){if(e)e.preventDefault();G.cleaning=!G.cleaning;bc.classList.toggle('on',G.cleaning);notify(G.cleaning?'🧹 Čištění ZAPNUTO':'⏸ Čištění vypnuto',G.cleaning?'g':'');}
+bc.addEventListener('click',toggleClean);
+bc.addEventListener('touchstart',toggleClean,{passive:false});
+
+function doRefill(e){if(e)e.preventDefault();
+  if(Math.hypot(pPos.x,pPos.z)<2.5){const c=Math.round((G.fuelMax-G.fuel)*.8);if(G.money>=c||c===0){G.money-=c;G.fuel=G.fuelMax;notify('⛽ Doplněno! -'+c+' Kč','g');updateHUD();}else notify('💸 Nedostatek peněz!','r');}
+  else notify('⛽ Jeď na DEPO (modré místo uprostřed)!');
+}
+document.getElementById('br').addEventListener('click',doRefill);
+document.getElementById('br').addEventListener('touchstart',doRefill,{passive:false});
+
+function doEmpty(e){if(e)e.preventDefault();
+  if(Math.hypot(pPos.x,pPos.z)<2.5){const earn=Math.round(G.tank*3);G.money+=earn;G.tank=0;if(earn>0)notify('🗑 Vysypáno! +'+earn+' Kč','y');updateHUD();}
+  else notify('🗑 Jeď na DEPO!');
+}
+document.getElementById('be').addEventListener('click',doEmpty);
+document.getElementById('be').addEventListener('touchstart',doEmpty,{passive:false});
+
+window.selV=function(name,btn){
+  G.selV=name;
+  document.querySelectorAll('.vbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  spawnPlayer(name);
+};
+
+// ── GAME LOOP ─────────────────────────────────────────────────────────────────
+const SPEED=4.5,CR=1.3;
+let lastT=0;
 function loop(ts){
   requestAnimationFrame(loop);
-  const dt=Math.min((ts-lt)/1000,.05); lt=ts;
+  const dt=Math.min((ts-lastT)/1000,.05); lastT=ts;
 
   let ix=jx,iz=jz;
   if(keys['w']||keys['arrowup'])iz-=1;
   if(keys['s']||keys['arrowdown'])iz+=1;
   if(keys['a']||keys['arrowleft'])ix-=1;
   if(keys['d']||keys['arrowright'])ix+=1;
-  const m=Math.hypot(ix,iz); if(m>1){ix/=m;iz/=m;}
+  const mg=Math.hypot(ix,iz); if(mg>1){ix/=mg;iz/=mg;}
 
-  if((ix||iz)&&G.fuel>0){
-    const wx=(ix-iz)*.707, wz=(ix+iz)*.707;
-    pos.x=Math.max(-7,Math.min(7,pos.x+wx*4.5*dt));
-    pos.z=Math.max(-7,Math.min(7,pos.z+wz*4.5*dt));
-    truckGroup.position.set(pos.x,0,pos.z);
+  if((ix||iz)&&G.fuel>0&&player){
+    const wx=(ix-iz)*.707,wz=(ix+iz)*.707;
+    pPos.x=Math.max(-8,Math.min(8,pPos.x+wx*SPEED*dt));
+    pPos.z=Math.max(-8,Math.min(8,pPos.z+wz*SPEED*dt));
+    player.position.set(pPos.x,0,pPos.z);
     tAngle=Math.atan2(wx,wz);
-    G.fuel=Math.max(0,G.fuel-.5*dt*60);
+    G.fuel=Math.max(0,G.fuel-.45*dt*60);
+    if(G.fuel<=0)notify('⛽ Prázdná nádrž! Jeď na DEPO','r');
   }
   let da=tAngle-pAngle; while(da>Math.PI)da-=Math.PI*2; while(da<-Math.PI)da+=Math.PI*2;
-  pAngle+=da*.15; truckGroup.rotation.y=pAngle;
+  pAngle+=da*.15; if(player)player.rotation.y=pAngle;
 
-  if(G.cleaning&&G.fuel>0){
+  if(G.cleaning&&G.fuel>0&&G.tank<G.tankMax){
     dirts.forEach(d=>{
       if(d.userData.cleaned)return;
-      if(Math.hypot(d.position.x-pos.x,d.position.z-pos.z)<1.2){
+      if(Math.hypot(d.position.x-pPos.x,d.position.z-pPos.z)<CR){
         d.userData.cleaned=true; d.visible=false;
-        G.cleanedDirt++; G.money+=5; G.fuel=Math.max(0,G.fuel-.2);
+        G.tank=Math.min(G.tankMax,G.tank+1); G.cleanedDirt++;
+        G.money+=3+Math.floor(Math.random()*5);
+        G.fuel=Math.max(0,G.fuel-.15);
+        updateHUD();
+        if(G.cleanedDirt===G.totalDirt){notify('🎉 Mise splněna! +200 Kč','y');G.money+=200;updateHUD();}
       }
     });
+    if(G.tank>=G.tankMax)notify('🗑 Nádrž plná! Jeď vysypat na DEPO');
   }
 
-  // Camera follow
-  cam.position.set(pos.x+15, 15, pos.z+15);
-  cam.lookAt(pos);
+  npcs.forEach(n=>{
+    n.t+=n.spd; if(n.t>=1){n.t=0;n.idx=(n.idx+1)%n.path.length;}
+    const f=n.path[n.idx],to=n.path[(n.idx+1)%n.path.length];
+    n.mesh.position.set(f.x+(to.x-f.x)*n.t,0,f.z+(to.z-f.z)*n.t);
+    n.mesh.rotation.y=Math.atan2(to.x-f.x,to.z-f.z);
+  });
 
-  updateHUD();
-  renderer.render(scene, cam);
+  if(player){
+    const ct=player.position.clone().add(new THREE.Vector3(18,18,18));
+    cam.position.lerp(ct,.09); cam.lookAt(player.position);
+  }
+  updateVehHUD();
+  renderer.render(scene,cam);
 }
-requestAnimationFrame(loop);
 
-window.addEventListener('resize',()=>{
-  const w=innerWidth,h=innerHeight,a=w/h;
-  cam.left=-F*a; cam.right=F*a; cam.updateProjectionMatrix();
-  renderer.setSize(w,h);
-});
+// ── START ─────────────────────────────────────────────────────────────────────
+function startGame(){
+  document.getElementById('loadinfo').style.display='none';
+  buildMap(); spawnDirt(); spawnNPCs();
+  spawnPlayer(G.selV); updateHUD();
+  lastT=performance.now();
+  requestAnimationFrame(loop);
+  setTimeout(()=>notify('👆 Táhni prstem = pohyb','g'),600);
+  setTimeout(()=>notify('🧹 Tlačítko = zapni čištění',''),2500);
+  setTimeout(()=>notify('⛽ Modré DEPO uprostřed = doplnit',''),4500);
+}
+
+// Load all models from ROOT (no assets/ subfolder)
+['truck','garbage-truck','firetruck','van','delivery',
+ 'sedan','taxi','police','suv','hatchback-sports',
+ 'road-straight','road-crossroad',
+ 'building-a','building-b','building-c','building-d','building-e','building-f',
+ 'building-type-a','building-type-b','building-type-c','building-type-d',
+].forEach(n=>loadModel(n));
+
+document.body.addEventListener('touchmove',e=>e.cancelable&&e.preventDefault(),{passive:false});
 </script>
 </body>
 </html>
